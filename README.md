@@ -10,7 +10,7 @@ A WebGPU path tracer in a single HTML file, inspired by [Reinhold Preiner's sing
     - may run on Firefox Nightly (about:config and dom.webgpu.enabled and gfx.webrender.all) with slight adjustments
 
 * Run: 
-    - Simply open the HTML file in your browser, and wait for the rendered image to appear. There is no need for a local HTTP server to circument CORS, since CSS, Javascript and WGSL shaders are all embedded into the index.html file.
+    - Simply open the HTML file in your browser, and wait for the rendered image to appear. There is no need for a local HTTP server to circumvent CORS, since CSS, Javascript and WGSL shaders are all embedded into the index.html file.
 
 * Adjust:
     - rendering resolution - search for "webgpu-canvas" and adjust it's (max-)width/height
