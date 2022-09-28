@@ -439,9 +439,9 @@
 
                 // ### kick off compute shader calculation
                 device.queue.submit([commandEncoder.finish()]);
-            }
-            
+            }            
             console.log("path tracing end (async)");
+            
             {
                 const commandEncoder = device.createCommandEncoder();
                 commandEncoder.copyBufferToBuffer(radiancesBuffer, 0, readbackBuffer, 0, radiancesBufferByteLength);
