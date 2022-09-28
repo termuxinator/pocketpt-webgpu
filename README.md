@@ -21,6 +21,8 @@ A WebGPU path tracer in a single HTML file, inspired by [Reinhold Preiner's sing
 
 Due to WebGPU's lack of double-precision support, the walls that were originally made up of very large and distant spheres (so they appear locally flat), were replaced by simple planes, due to numerical imprecisions which would otherwise lead to rendering artifacts (surface acne).
 
+In this project, WebGPU runs "headless" (without a "context window"), but for convenience the output buffer is read back from the GPU to the CPU and then displayed in the browser.
+
 ## 
 Special thanks go to Reinhold Preiner, and of course Kevin Beason for publishing their respective path tracing source code, as well as to 
 [Austin Eng's WebGPU Samples](https://austin-eng.com/webgpu-samples/), [Tarek Sherif's WebGPU Examples](https://github.com/tsherif/webgpu-examples), and [Surma's article 'WebGPU - All of the cores, none of the canvas'](https://surma.dev/things/webgpu/), which were invaluable resources to get this project up and running.
