@@ -26,7 +26,7 @@ Special thanks go to Reinhold Preiner, and of course Kevin Beason for publishing
 [Austin Eng's WebGPU Samples](https://austin-eng.com/webgpu-samples/), [Tarek Sherif's WebGPU Examples](https://github.com/tsherif/webgpu-examples), and [Surma's article 'WebGPU - All of the cores, none of the canvas'](https://surma.dev/things/webgpu/), which were invaluable resources to get this project up and running.
 
 Also of interest:
-* [Precision Improvements for Ray/Sphere Intersection by Eric Haines, Johannes Günther, and Thomas Akenine-Möller](https://link.springer.com/content/pdf/* 10.1007/978-1-4842-4427-2_7.pdf).
+* [Precision Improvements for Ray/Sphere Intersection by Eric Haines, Johannes Günther, and Thomas Akenine-Möller](https%3A%2F%2Flink.springer.com%2Fcontent%2Fpdf%2F*%2010.1007%2F978-1-4842-4427-2_7.pdf).
 * https://prideout.net/emulating-double-precision
 * http://blog.hvidtfeldts.net/index.php/2012/07/double-precision-in-opengl-and-webgl/
 * https://blog.cyclemap.link/2011-06-09-glsl-part2-emu/
