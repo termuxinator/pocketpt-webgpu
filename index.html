@@ -290,9 +290,8 @@
                     if (pix.x >= imgdim.x || pix.y >= imgdim.y) { return; }
                     let gid = pix.y * imgdim.x + (imgdim.x - 1u - pix.x);
                     let cam = Ray(vec3<f32>(0.0, 0.52, 7.4), normalize(vec3<f32>(0.0, -0.06, -1.0)));
-                    var cx = normalize( cross( cam.d, select( vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(0.0, 1.0, 0.0), abs(cam.d.y) < 0.9 ) ) );
-                    var cy = cross(cx, cam.d);
-
+                    let cx = normalize( cross( cam.d, select( vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(0.0, 1.0, 0.0), abs(cam.d.y) < 0.9 ) ) );
+                    let cy = cross(cx, cam.d);
                     let sdim = vec2<f32>(0.03); // sensor size (30 x 20 mm) => should match aspect ratio of output buffer
                     let rnd2 = 2.0 * rand01(vec3<u32>(pix, samps.x)).xy;
                     let tent = vec2<f32>( select( 1.0 - sqrt(2.0 - rnd2.x), sqrt(rnd2.x) - 1.0, rnd2.x < 1.0 ),
