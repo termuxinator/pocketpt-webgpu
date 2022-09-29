@@ -178,7 +178,7 @@
                 ]
             });
 
-            // path tracer (compute shader)
+            // ### path tracer (compute shader)
             const computeShaderString = `
                 struct Ray {
                     o: vec3<f32>,
@@ -241,7 +241,6 @@
                 }
 
                 fn intersect(ray: Ray, hitInfo: ptr<function, HitInfo>) -> bool {
-
                     let eps: f32 = 1.0e-4;
                     let inf: f32 = 1.0e20;
                     var d: f32 = inf;
@@ -348,6 +347,7 @@
                         }
 
                         if ( objMaterialType == 1u ) {
+                            let M_PI: f32 = 3.141592653589793;
                             for (var i: u32 = 0u; i < arrayLength( &spheres.data ); i++ ) {
                                 let ls = spheres.data[i];
                                 if ( ls.e.r == 0.0 && ls.e.g == 0.0 && ls.e.b == 0.0 ) { continue; }
@@ -360,17 +360,17 @@
                                 let cos_a_max = sqrt( 1.0 - ls.geo.w * ls.geo.w / dot( xc, xc ) );
                                 let cos_a = 1.0 - rnd.x + rnd.x * cos_a_max;
                                 let sin_a = sqrt( 1.0 - cos_a * cos_a );
-                                let phi = 2 * 3.141592653589793 * rnd.y;
+                                let phi = 2.0 * M_PI * rnd.y;
                                 let l = normalize(su*cos(phi)*sin_a + sv*sin(phi)*sin_a + sw*cos_a);
                                 let idls:i32 = 0;
                                 var hitInfo_ne: HitInfo;
                                 if (intersect(Ray(objIsectPoint,l), &hitInfo_ne) && hitInfo_ne.objType == 1u && hitInfo_ne.objIdx == i ) {
-                                    let omega = 2 * 3.141592653589793 * (1.0-cos_a_max);
-                                    accrad += accmat / 3.141592653589793 * max(dot(l,nl),0) * ls.e.rgb * omega;
+                                    let omega = 2 * M_PI * (1.0-cos_a_max);
+                                    accrad += accmat / M_PI * max(dot(l,nl),0) * ls.e.rgb * omega;
                                 }
                             }
 
-                            let r1 = 2.0 * 3.141592653589793 * rnd.x;
+                            let r1 = 2.0 * M_PI * rnd.x;
                             let r2 = rnd.y;
                             let r2s = sqrt(r2);
                             let w = nl;
