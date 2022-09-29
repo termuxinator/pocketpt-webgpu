@@ -455,8 +455,8 @@
                     imgData[i] = Math.floor(data[i]);
                 }
 
-                var readBackCanvas = document.createElement('canvas');
-                var readBackCanvasContext = readBackCanvas.getContext('2d');
+                var readBackCanvas = document.createElement("canvas");
+                var readBackCanvasContext = readBackCanvas.getContext("2d");
                 readBackCanvas.width = canvas.width;
                 readBackCanvas.height = canvas.height;
                 var readBackImgData = readBackCanvasContext.getImageData(0, 0, canvas.width, canvas.height);
