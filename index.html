@@ -400,7 +400,7 @@
                         }
                     }
 
-                    accRad.data[gid] += vec4<f32>(accrad / f32( samps.y ), 0.0); // ### accumulate radiance in each pass
+                    accRad.data[gid] += vec4<f32>(accrad / f32( samps.y ), 0.0); // ### accumulate radiance for this pass
                     if (samps.x == samps.y - 1) { // ## map radiances to 8bit rgb and perform gamma mapping for final image
                         accRad.data[gid] = vec4<f32>( pow(vec3<f32>(clamp(accRad.data[gid].xyz, vec3<f32>(0.0f), vec3<f32>(1.0f))), vec3<f32>(0.45)) * 255.0 + 0.5, accRad.data[gid].w );
                     }
