@@ -1,5 +1,5 @@
 # pocketpt
-A WebGPU path tracer in a single HTML file, inspired by [Reinhold Preiner's single-source GLSL path tracer in 111 lines of code](https://github.com/rpreiner/pocketpt), which itself is based on [Kevin Beason's smallpt](http://kevinbeason.com/smallpt). This project does not quite hit the sub 111 LOC target, but should remain quite readable at less than 485 LOC (WGSL), and less than 430 LOC (GLSL).
+A WebGPU path tracer in a single HTML file, inspired by [Reinhold Preiner's single-source GLSL path tracer in 111 lines of code](https://github.com/rpreiner/pocketpt), which itself is based on [Kevin Beason's smallpt](http://kevinbeason.com/smallpt). This project does not quite hit the sub 111 LOC target, but should remain quite readable at less than 485 LOC (WGSL), and less than 430 LOC (GLSL), respectively.
 
 <img src="512x512@8Kspp.png" width="512">
 
@@ -23,7 +23,7 @@ Due to WebGPU's lack of double-precision support, the walls that were originally
 
 In this project, WebGPU runs "headless" (without a "context window"), but for convenience the output buffer is read back from the GPU to the CPU and then displayed in the browser.
 
-Internet access is required for running the GLSL compute-shader version. The WGSL version will also work offline.
+An internet connections is required for running the GLSL compute-shader version. The WGSL version will also work offline.
 
 ## 
 Special thanks go to Reinhold Preiner, and of course Kevin Beason for publishing their respective path tracing source code, as well as to 
