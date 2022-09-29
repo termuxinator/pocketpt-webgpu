@@ -1,0 +1,428 @@
+<html >
+<head >
+    <meta charset="utf-8" >
+    <style>
+        html, body {
+            margin: 5;
+            overflow: hidden;
+        }
+    </style>
+    <script >
+        (function() {
+            window.utils = {
+                checkSupport() {
+                    if (!navigator.gpu) {
+                        document.body.innerHTML = `
+                            <h1>WebGPU not supported!</h1>
+                            <div>
+                                WebGPU is currently only fully supported in <a href="https://www.google.com/chrome/canary/">Chrome Canary</a> with the flag "enable-unsafe-webgpu" enabled.
+                            </div>
+                        `;
+                        throw new Error("WebGPU not supported");
+                    }
+                },
+            }
+        })();
+    </script>
+</head>
+<body >
+    <canvas id="webgpu-canvas" width="512" height="512" maxwidth="512" maxheight="512" hidden="false" ></canvas>
+    <script type="module" >
+        ( async function init() {
+            // ### WebGPU context
+            utils.checkSupport();
+            const [adapter, glslang] = await Promise.all([
+                navigator.gpu.requestAdapter(),
+                import("https://unpkg.com/@webgpu/glslang@0.0.15/dist/web-devel/glslang.js").then(m => m.default()), // ### need internet access!
+            ]);
+            const device = await adapter.requestDevice();
+            const canvas = document.getElementById("webgpu-canvas");
+            const context = canvas.getContext("webgpu");
+            const presentationFormat = await navigator.gpu.getPreferredCanvasFormat();
+            context.configure({
+                device: device,
+                format: presentationFormat,
+                alphaMode: "opaque",
+                usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST,
+            });
+
+            // ### scene - spheres
+            const numSpheres = 9;
+            const floatsPerSphere = 12;
+            const spheresByteSize = floatsPerSphere * 4 * numSpheres;
+            const spheresBuffer = device.createBuffer({
+                size: spheresByteSize,
+                usage: GPUBufferUsage.STORAGE,
+                mappedAtCreation: true
+            });
+            new Float32Array(spheresBuffer.getMappedRange()).set([
+                -1.3, -1.2, -1.3, 0.8,   0.0,   0.0,   0.0, 0.0, 0.999, 0.999, 0.999, 2.0, // Reflective sphere
+                 1.3, -1.2, -0.2, 0.8,   0.0,   0.0,   0.0, 0.0, 0.999, 0.999, 0.999, 3.0, // Refractive sphere
+                 0.0,  1.6,  0.0, 0.2, 100.0, 100.0, 100.0, 0.0, 0.0,   0.0,   0.0,   1.0, // Light source
+            ]);
+            spheresBuffer.unmap();
+
+            // ### scene - planes
+            const numPlanes = 6;
+            const floatsPerPlane = 12;
+            const planesByteSize = floatsPerPlane * 4 * numPlanes;
+            const planesBuffer = device.createBuffer({
+                size: planesByteSize,
+                usage: GPUBufferUsage.STORAGE,
+                mappedAtCreation: true
+            });
+            new Float32Array(planesBuffer.getMappedRange()).set([
+                -1.0, +0.0, +0.0, +2.6, 0, 0, 0, 0, .85, .25, .25, 1, // Left Wall
+                +1.0, +0.0, +0.0, +2.6, 0, 0, 0, 0, .25, .35, .85, 1, // Right Wall
+                +0.0, +1.0, +0.0, +2.0, 0, 0, 0, 0, .75, .75, .75, 1, // Ceiling
+                +0.0, -1.0, +0.0, +2.0, 0, 0, 0, 0, .75, .75, .75, 1, // Floor
+                +0.0, +0.0, -1.0, +2.8, 0, 0, 0, 0, .85, .85, .25, 1, // Back Wall
+                +0.0, +0.0, +1.0, +7.9, 0, 0, 0, 0, 0.1, 0.7, 0.7, 1, // Front Wall
+            ]);
+            planesBuffer.unmap();
+
+            // ### radiance buffer (output image of path tracer)            
+            const numComponents = 4;
+            const radiancesBufferLength = numComponents * canvas.width * canvas.height;
+            const radiancesBufferByteLength = radiancesBufferLength * 4;
+            const radiancesBuffer = device.createBuffer({
+                size: radiancesBufferByteLength,
+                usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC | GPUBufferUsage.STORAGE,
+                mappedAtCreation: true
+            });
+            const radiancesBufferData = new Float32Array(radiancesBuffer.getMappedRange());
+            for (var i = 0; i < radiancesBufferLength; i += 1) {
+                radiancesBufferData[i] = 0.0;
+            }
+            radiancesBuffer.unmap();
+
+            // ### buffer for reading back radiances from the GPU to the CPU for display
+            const readbackBuffer = device.createBuffer({
+                size: radiancesBufferByteLength,
+                usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+                mappedAtCreation: false
+            });
+
+            // ### parameters for path tracer
+            var pass = 0;
+            const samplesPerPixel = 400;
+            const computeUniformData = new Uint32Array([
+                canvas.width, canvas.height, pass, samplesPerPixel
+            ]);
+            const computeUniformBuffer = device.createBuffer({
+                size: computeUniformData.byteLength,
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+            });
+            device.queue.writeBuffer(computeUniformBuffer, 0, computeUniformData);
+
+            // ### setup buffer layouts/bindings
+            const computeBindGroupLayout = device.createBindGroupLayout({
+                entries: [
+                    {
+                        binding: 0,
+                        visibility: GPUShaderStage.COMPUTE,
+                        buffer: {
+                            type: "read-only-storage"
+                        }
+                    },
+                    {
+                        binding: 1,
+                        visibility: GPUShaderStage.COMPUTE,
+                        buffer: {
+                            type: "read-only-storage"
+                        }
+                    },
+                    {
+                        binding: 2,
+                        visibility: GPUShaderStage.COMPUTE,
+                        buffer: {
+                            type: "storage"
+                        }
+                    },
+                    {
+                        binding: 3,
+                        visibility: GPUShaderStage.COMPUTE,
+                        buffer: {
+                            type: "uniform"
+                        }
+                    }
+                ]
+            });
+            const computeBindGroup = device.createBindGroup({
+                layout: computeBindGroupLayout,
+                entries: [
+                    {
+                        binding: 0,
+                        resource: {
+                            buffer: spheresBuffer
+                        }
+                    },
+                    {
+                        binding: 1,
+                        resource: {
+                            buffer: planesBuffer
+                        }
+                    },
+                    {
+                        binding: 2,
+                        resource: {
+                            buffer: radiancesBuffer
+                        }
+                    },
+                    {
+                        binding: 3,
+                        resource: {
+                            buffer: computeUniformBuffer
+                        }
+                    }
+                ]
+            });
+
+            // ### path tracer (compute shader in GLSL)
+            const computeShaderString = `
+                #version 460
+
+                layout( local_size_x = 16, local_size_y = 16 ) in;
+
+                struct Ray { vec3 o; vec3 d; };
+                struct Sphere { vec4 geo; vec4 e; vec4 c; };
+                struct Plane { vec4 equation; vec4 e; vec4 c; };
+
+                layout( std430, binding = 0 ) readonly buffer b0 { Sphere spheres []; };
+                // quirk(?): Sphere and Plane structs alias partially(?) and lead to type erros later on => just use a generic vec4[3]
+                layout( std430, binding = 1 ) readonly buffer b1 { vec4[3] planes []; }; 
+                layout( std430, binding = 2 ) buffer b2 { vec4 accRad []; };
+
+                layout( std140, set = 0, binding = 3 ) uniform u_global {
+                    uvec4 imgdim_samplecount;
+                };
+
+                struct HitInfo {
+                    float   rayT;
+                    int     objType;
+                    int     objIdx;
+                };
+
+                #define ePlane      0
+                #define eSphere     1
+
+                // ### material types
+                #define eDiffuseMaterial        1
+                #define eReflectiveMaterial     2
+                #define eRefractiveMaterial     3
+
+                vec3 rand01( uvec3 x ) {
+                    for ( int i = 0; i < 3; i++ ) { x = ((x >> 8U) ^ x.yzx) * 1103515245U; }
+                    return vec3( x ) * ( 1.0 / float( 0xffffffffU ) );
+                }
+
+                bool intersect( Ray ray, out HitInfo hitInfo ) {
+                    float d, inf = 1e20, t = inf, eps = 1e-4;
+
+                    for ( int i = 0; i < planes.length(); i++ ) {
+                        vec4 planeEqu = planes[i][0];
+                        float denom = dot( ray.d, planeEqu.xyz );
+                        if ( denom > eps ) {
+                            d = ( planeEqu.w - dot( ray.o, planeEqu.xyz ) ) / denom ;
+                            if ( d < t ) {
+                                t = d; hitInfo.objType = ePlane; hitInfo.objIdx = i;
+                            }
+                        }
+                    }
+
+                    for ( int i = 0; i < spheres.length(); i++ ) {
+                        Sphere sphere = spheres[i];
+                        vec3 oc = sphere.geo.xyz - ray.o;
+                        float b = dot(oc, ray.d), det = b * b - dot(oc, oc) + sphere.geo.w * sphere.geo.w;
+                        if (det < 0) { continue; } else { det = sqrt(det); }
+                        d = (d = (b - det)) > eps ? d : ((d = (b + det)) > eps ? d : inf);
+                        if (d < t) {
+                            t=d; hitInfo.objType = eSphere; hitInfo.objIdx = i;
+                        }
+                    }
+
+                    if (t < inf) {
+                        hitInfo.rayT = t;
+                        return true;
+                    }
+                    return false;
+                }
+
+                void main()
+                {
+                    uvec2 imgdim = imgdim_samplecount.xy;
+                    uvec2 samps = imgdim_samplecount.zw;
+                    uvec2 pix = gl_GlobalInvocationID.xy;
+                    if (pix.x >= imgdim.x || pix.y >= imgdim.y) return;
+                    uint gid = pix.y * imgdim.x + (imgdim.x - 1 - pix.x);
+                    Ray cam = Ray(vec3(0, 0.52, 7.4), normalize(vec3(0, -0.06, -1)));
+                    vec3 cx = normalize(cross(cam.d, abs(cam.d.y) < 0.9 ? vec3(0, 1, 0) : vec3(0, 0, 1))), cy = cross(cx, cam.d);
+                    const vec2 sdim = vec2(0.03);
+                    vec2 rnd2 = 2 * rand01(uvec3(pix, samps.x)).xy;
+                    vec2 tent = vec2(rnd2.x < 1 ? sqrt(rnd2.x) - 1 : 1 - sqrt(2 - rnd2.x), rnd2.y < 1 ? sqrt(rnd2.y) - 1 : 1 - sqrt(2 - rnd2.y));
+                    vec2 s = ((pix + 0.5 * (0.5 + vec2((samps.x / 2) % 2, samps.x % 2) + tent)) / vec2(imgdim) - 0.5) * sdim;
+                    vec3 spos = cam.o + cx * s.x + cy * s.y, lc = cam.o + cam.d * 0.035;
+                    vec3 accrad = vec3(0), accmat = vec3(1);
+                    Ray ray = Ray(lc, normalize(lc - spos));
+
+                    float emissive = 1;
+                    for (int depth = 0, maxDepth = 24; depth < maxDepth; depth++)
+                    {
+                        HitInfo hitInfo;
+                        if ( !intersect( ray, hitInfo ) ) { continue; }
+
+                        vec3 objEmissiveColor, objDiffuseColor;
+                        int objMaterialType;
+                        vec3 objIsectNormal;
+                        vec3 objIsectPoint = ray.o + hitInfo.rayT * ray.d;
+                        if ( hitInfo.objType == ePlane ) {
+                            Plane hitPlane;
+                            hitPlane.equation = planes[ hitInfo.objIdx ][0];
+                            objEmissiveColor = planes[ hitInfo.objIdx ][1].rgb;
+                            objDiffuseColor  = planes[ hitInfo.objIdx ][2].rgb;
+                            objMaterialType  = int( floor( planes[ hitInfo.objIdx ][2].w + 0.5f ) );
+                            vec4 hitPlaneEqu = hitPlane.equation;
+                            objIsectNormal = hitPlaneEqu.xyz;
+                        } else if ( hitInfo.objType == eSphere ) {
+                            Sphere hitSphere = spheres[ hitInfo.objIdx ];
+                            objMaterialType  = int( floor( hitSphere.c.w + 0.5f ) );
+                            objEmissiveColor = hitSphere.e.rgb;
+                            objDiffuseColor  = hitSphere.c.rgb;
+                            objIsectNormal = normalize( objIsectPoint - hitSphere.geo.xyz );
+                        }
+
+                        vec3 nl = dot(objIsectNormal,ray.d) < 0 ? objIsectNormal : -objIsectNormal;
+                        accrad += accmat * objEmissiveColor * emissive;
+                        accmat *= objDiffuseColor;
+                        vec3 rnd = rand01(uvec3(pix, samps.x*maxDepth + depth));
+                        float p = max(max(objDiffuseColor.x, objDiffuseColor.y), objDiffuseColor.z);
+                        if (depth > 5) {
+                            if (rnd.z >= p) { break; } // ### russian roulette ray termination
+                            else { accmat /= p; }      // ### energy compensation of surviving rays
+                        }
+
+                        if ( objMaterialType == eDiffuseMaterial ) { // ### ideal diffuse reflection
+                            const float pi = 3.141592653589793;
+                            for (int i = 0; i < spheres.length(); i++) { // ### direct illumination: next event estimation over lights
+                                Sphere ls = spheres[i];
+                                if (all(equal(ls.e.rgb, vec3(0)))) { continue; } // ### skip non-emissive spheres
+                                
+                                vec3 xls, nls, xc = ls.geo.xyz - objIsectPoint;
+                                vec3 sw = normalize(xc), su = normalize(cross((abs(sw.x) > .1 ? vec3(0, 1, 0) : vec3(1, 0, 0)), sw)), sv = cross(sw, su);
+                                float cos_a_max = sqrt(float(1 - ls.geo.w * ls.geo.w / dot(xc, xc)));
+                                float cos_a = 1 - rnd.x + rnd.x * cos_a_max, sin_a = sqrt(1 - cos_a * cos_a);
+                                float phi = 2 * pi * rnd.y;
+                                vec3 l = normalize(su*cos(phi)*sin_a + sv*sin(phi)*sin_a + sw*cos_a); // ### sampled direction towards light
+                                int idls = 0;
+                                HitInfo hitInfo_ne;
+                                // ### test if shadow ray hits this light source
+                                if (intersect(Ray(objIsectPoint,l), hitInfo_ne) && hitInfo_ne.objType == eSphere && hitInfo_ne.objIdx == i ) {
+                                    float omega = 2 * pi * (1-cos_a_max);
+                                    accrad += accmat / pi * max(dot(l,nl),0) * ls.e.rgb * omega; // ### brdf term obj.c.xyz already in accmat, 1/pi for brdf
+                                }
+                            }
+                            // ### indirect illumination: cosine-weighted importance sampling
+                            float r1 = 2 * pi * rnd.x, r2 = rnd.y, r2s = sqrt(r2);
+                            vec3 w = nl, u = normalize( (cross(abs(w.x) > 0.1 ? vec3(0, 1, 0) : vec3(1, 0, 0), w)) ), v = cross(w, u);
+                            ray = Ray(objIsectPoint, normalize(u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)));
+                            emissive = 0;
+                        } else if ( objMaterialType == eReflectiveMaterial ) { // ### ideal specular reflection
+                            ray = Ray(objIsectPoint, reflect(ray.d, objIsectNormal));
+                            emissive = 1;
+                        } else if ( objMaterialType == eRefractiveMaterial ) { // ### ideal dielectric refraction
+                            bool into = ( objIsectNormal == nl );
+                            float cos2t, nc = 1, nt = 1.5, nnt = into ? nc / nt : nt / nc, ddn = dot(ray.d, nl);
+                            if ((cos2t = 1 - nnt * nnt * (1 - ddn * ddn)) >= 0) // ### Fresnel reflection/refraction
+                            {
+                                vec3 tdir = normalize(ray.d * nnt - objIsectNormal * ((into ? 1 : -1) * (ddn * nnt + sqrt(cos2t))));
+                                float a = nt - nc, b = nt + nc, R0 = a * a / (b * b), c = 1 - (into ? -ddn : dot(tdir, objIsectNormal));
+                                float Re = R0 + (1 - R0) * c * c * c * c * c, Tr = 1 - Re, P = 0.25 + 0.5 * Re, RP = Re / P, TP = Tr / (1 - P);
+                                ray = Ray(objIsectPoint, rnd.x < P ? reflect(ray.d, objIsectNormal) : tdir); // ### pick reflection with probability P
+                                accmat *= rnd.x < P ? RP : TP; // ### energy compensation
+                            }
+                            else { ray = Ray(objIsectPoint, reflect(ray.d, objIsectNormal)); } // ### total internal reflection
+                            emissive = 1;
+                        }
+                    }
+
+                    accRad[gid] += vec4(accrad / samps.y, 0.0); // ### accumulate radiance for this pass
+                    if (samps.x == samps.y - 1.0) { // ## map radiances to 8bit rgb and perform gamma mapping for final image
+                        accRad[gid] = vec4( pow(vec3(clamp(accRad[gid].xyz, 0.0, 1.0)), vec3(0.45)) * 255.0 + 0.5, accRad[gid].w );
+                    }
+                }
+            `;
+
+            const computePipeline = device.createComputePipeline({
+                layout: device.createPipelineLayout({ bindGroupLayouts: [computeBindGroupLayout] }),
+                compute: {
+                    module: device.createShaderModule({
+                        code: glslang.compileGLSL(computeShaderString, "compute")
+
+                    }),
+                    entryPoint: "main"
+                }
+            });
+
+            console.log("path tracing start (async)");
+            for (var curr_pass = 0; curr_pass < samplesPerPixel; curr_pass += 1) {
+                // ### prepare next path-tracer pass
+                const commandEncoder = device.createCommandEncoder();
+                const computePass = commandEncoder.beginComputePass();
+                computePass.setPipeline(computePipeline);
+                computePass.setBindGroup(0, computeBindGroup);
+                device.queue.writeBuffer(computeUniformBuffer, 0, new Uint32Array([
+                    canvas.width, canvas.height, curr_pass, samplesPerPixel
+                ]));
+                computePass.dispatchWorkgroups((canvas.width + 15) / 16, (canvas.height + 15) / 16);
+                computePass.end();
+
+                // ### kick off compute shader calculation
+                device.queue.submit([commandEncoder.finish()]);
+            }
+            console.log("path tracing end (async)");
+
+            {
+                const commandEncoder = device.createCommandEncoder();
+                commandEncoder.copyBufferToBuffer(radiancesBuffer, 0, readbackBuffer, 0, radiancesBufferByteLength);
+                device.queue.submit([commandEncoder.finish()]);
+
+                await readbackBuffer.mapAsync(
+                    GPUMapMode.READ,
+                    0,
+                    radiancesBufferByteLength
+                );
+                const copyArrayBuffer = readbackBuffer.getMappedRange(0, radiancesBufferByteLength);
+                const dataRaw = copyArrayBuffer.slice();
+                readbackBuffer.unmap();
+                const data = new Float32Array(dataRaw);
+                const imgData = new Uint8ClampedArray({ length: canvas.width * canvas.height * 4 }).fill(128);
+                for (let i = 0; i < imgData.length; i += 1) {
+                    imgData[i] = Math.floor(data[i]);
+                }
+
+                var readBackCanvas = document.createElement('canvas');
+                var readBackCanvasContext = readBackCanvas.getContext('2d');
+                readBackCanvas.width = canvas.width;
+                readBackCanvas.height = canvas.height;
+                var readBackImgData = readBackCanvasContext.getImageData(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < imgData.length; i += 1) {
+                    readBackImgData.data[i] = imgData[i];
+                    if (i % 4 == 3) { readBackImgData.data[i] = 255; }
+                }
+                readBackCanvasContext.putImageData(readBackImgData, 0, 0);
+
+                var img = new Image();
+                img.src = readBackCanvas.toDataURL();
+                document.body.appendChild(img);
+                await img.decode();
+                const imageBitmap = await createImageBitmap(img);
+                device.queue.copyExternalImageToTexture(
+                    { source: imageBitmap },
+                    { texture: context.getCurrentTexture() },
+                    [canvas.width, canvas.height]
+                );
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 # pocketpt
-A WebGPU path tracer in a single HTML file, inspired by [Reinhold Preiner's single-source GLSL path tracer in 111 lines of code](https://github.com/rpreiner/pocketpt), which itself is based on [Kevin Beason's smallpt](http://kevinbeason.com/smallpt). This project does not quite hit the sub 111 LOC target, but should remain quite readable at less than 485 LOC.
+A WebGPU path tracer in a single HTML file, inspired by [Reinhold Preiner's single-source GLSL path tracer in 111 lines of code](https://github.com/rpreiner/pocketpt), which itself is based on [Kevin Beason's smallpt](http://kevinbeason.com/smallpt). This project does not quite hit the sub 111 LOC target, but should remain quite readable at less than 485 LOC (WGSL), and less than 430 LOC (GLSL).
 
 <img src="512x512@8Kspp.png" width="512">
 
@@ -10,10 +10,10 @@ A WebGPU path tracer in a single HTML file, inspired by [Reinhold Preiner's sing
     - may run on Firefox Nightly (about:config and dom.webgpu.enabled and gfx.webrender.all) with slight adjustments
 
 * Run: 
-    - Simply open the HTML file in your browser, and wait for the rendered image to appear. There is no need for a local HTTP server to circumvent CORS, since CSS, Javascript and WGSL shaders are all embedded into the index.html file.
+    - Simply open the HTML file in your browser, and wait for the rendered image to appear. There is no need for a local HTTP server to circumvent CORS, since CSS, Javascript and WGSL/GLSL shaders are all embedded into the respective HTML files.
 
 * Adjust:
-    - rendering resolution - search for "webgpu-canvas" and adjust it's (max-)width/height
+    - rendering resolution - search for "webgpu-canvas" and adjust its (max-)width/height attributes
     - samplesPerPixel - determines how many rays are traced per pixel (the more samples per pixel, the less noisy the result)
     - maxDepth - determines the maximum number of "bounces" per ray (default: 24)
 
@@ -22,6 +22,8 @@ A WebGPU path tracer in a single HTML file, inspired by [Reinhold Preiner's sing
 Due to WebGPU's lack of double-precision support, the walls that were originally made up of very large and distant spheres (so they appear locally flat), were replaced by simple planes, due to numerical imprecisions which would otherwise lead to rendering artifacts (surface acne).
 
 In this project, WebGPU runs "headless" (without a "context window"), but for convenience the output buffer is read back from the GPU to the CPU and then displayed in the browser.
+
+Internet access is required for running the GLSL compute-shader version. The WGSL version will also work offline.
 
 ## 
 Special thanks go to Reinhold Preiner, and of course Kevin Beason for publishing their respective path tracing source code, as well as to 
