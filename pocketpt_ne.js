@@ -7,27 +7,24 @@ async function init() {
     //////////////////////////////////////////
 
     const params = utils.parseUrlArgs(window.location);
-    if ( params.shaderlang == "glsl" ) {
-        console.log("glsl shader path");
-    } else if ( params.shaderlang == "wgsl" ) {
+
+    const shaderLangMode = ( params.shaderlang == "wgsl" ) ? "wgsl" : "glsl";
+    if ( shaderLangMode == "wgsl" ) {
         console.log("wgsl shader path");
     } else {
-        console.log("'shaderlang' arg not found");
+        console.log("glsl shader path");
     }
     
-    //var shaderLangMode = "glsl";
     var adapter, glslang;
-    if ( params.shaderlang == "glsl" ) {
-        [adapter, glslang] = await Promise.all([
-            navigator.gpu.requestAdapter(),
+    [adapter, glslang] = await Promise.all([
+        navigator.gpu.requestAdapter(),
+        
+        ( ( shaderLangMode == "glsl" ) ?
             // import("https://unpkg.com/@webgpu/glslang@0.0.15/dist/web-devel/glslang.js").then(m => m.default()), // for single-file solution
-            import("./dist/web-devel/glslang.js").then(m => m.default()), // for offline fetching
-        ]);
-    } else if ( params.shaderlang == "wgsl" ) {
-        [adapter] = await Promise.all([
-            navigator.gpu.requestAdapter(),
-        ]);
-    }
+            import("./dist/web-devel/glslang.js").then(m => m.default()) // for offline fetching
+            : null
+        ),
+    ]);
     
     ////////////////////////////////////
     // Set up device and canvas context
@@ -202,36 +199,19 @@ async function init() {
     // Create compute pipeline
     ///////////////////////////
 
-    // GLSL vs. WGSL
-    var computeShaderString;
-    if ( params.shaderlang == "glsl" ) {
-        computeShaderString = await utils.loadTextfile("./shaders/pocketpt_ne.cs");
-    } else if ( params.shaderlang == "wgsl" ) {
-        computeShaderString = await utils.loadTextfile("./shaders/pocketpt_ne.wgsl");
-    }
+    const computeShaderString = ( shaderLangMode == "wgsl" ) ? 
+        await utils.loadTextfile("./shaders/pocketpt_ne.wgsl") :
+        await utils.loadTextfile("./shaders/pocketpt_ne.cs");
 
-    var computePipeline;
-    if ( params.shaderlang == "glsl" ) {
-        computePipeline = device.createComputePipeline({
-            layout: device.createPipelineLayout({ bindGroupLayouts: [computeBindGroupLayout] }),
-            compute: {
+    const computePipeline = device.createComputePipeline({
+        layout: device.createPipelineLayout({ bindGroupLayouts: [computeBindGroupLayout] }),
+        compute: {
                 module: device.createShaderModule({
-                    code: glslang.compileGLSL(computeShaderString, "compute")
-                }),
-                entryPoint: "main"
-            }
-        });
-    } else if ( params.shaderlang == "wgsl" ) {
-        computePipeline = device.createComputePipeline({
-            layout: device.createPipelineLayout({ bindGroupLayouts: [computeBindGroupLayout] }),
-            compute: {
-                module: device.createShaderModule({
-                    code: computeShaderString, // GLSL vs. WGSL
-                }),
-                entryPoint: "main"
-            }
-        });        
-    }
+                code: ( shaderLangMode == "wgsl" ) ? computeShaderString : glslang.compileGLSL(computeShaderString, "compute")
+            }),
+            entryPoint: "main"
+        }
+    });
 
     ////////////////////////////////
     // Kick off path tracing in the compute shader
