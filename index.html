@@ -3,14 +3,13 @@
 <head>
     <meta charset="utf-8">
     <link rel="stylesheet" href="css/example.css">
-    <script>
-      #include "utils/utils.js"
-    </script>
+    <script src="utils/utils.js"></script>
 </head>
 <body>
   <canvas id="webgpu-canvas" width="512" height="512" maxwidth="512" maxheight="512" hidden="false"></canvas>
   <script type="module">
-      #include "./pocketpt_pcpp.js"      
+      import init from "./pocketpt_ne.js";
+      init();
   </script>
 </body>
 </html>

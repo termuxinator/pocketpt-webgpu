@@ -1,4 +1,4 @@
-( async function init() {
+async function init() {
     utils.checkSupport();
 
     //////////////////////////////////////////
@@ -6,17 +6,28 @@
     // to compile GLSL to SPIR-V
     //////////////////////////////////////////
 
-    const [adapter
-    #if defined( GLSL )
-        , glslang
-    #endif
-    ] = await Promise.all([
-        navigator.gpu.requestAdapter(),
-    #if defined( GLSL )
-        import("https://unpkg.com/@webgpu/glslang@0.0.15/dist/web-devel/glslang.js").then(m => m.default()), // for single-file solution
-        //import("./dist/web-devel/glslang.js").then(m => m.default()), // for offline fetching
-    #endif
-    ]);
+    const params = utils.parseUrlArgs(window.location);
+    if ( params.shaderlang == "glsl" ) {
+        console.log("glsl shader path");
+    } else if ( params.shaderlang == "wgsl" ) {
+        console.log("wgsl shader path");
+    } else {
+        console.log("'shaderlang' arg not found");
+    }
+    
+    //var shaderLangMode = "glsl";
+    var adapter, glslang;
+    if ( params.shaderlang == "glsl" ) {
+        [adapter, glslang] = await Promise.all([
+            navigator.gpu.requestAdapter(),
+            // import("https://unpkg.com/@webgpu/glslang@0.0.15/dist/web-devel/glslang.js").then(m => m.default()), // for single-file solution
+            import("./dist/web-devel/glslang.js").then(m => m.default()), // for offline fetching
+        ]);
+    } else if ( params.shaderlang == "wgsl" ) {
+        [adapter] = await Promise.all([
+            navigator.gpu.requestAdapter(),
+        ]);
+    }
     
     ////////////////////////////////////
     // Set up device and canvas context
@@ -191,31 +202,36 @@
     // Create compute pipeline
     ///////////////////////////
 
-    //const computeShaderString = await utils.loadTextfile("./shaders/pocketpt_ne.cs");
-#if defined( GLSL )
-    const computeShaderString = `
-        #include "./shaders/pocketpt_ne.cs"
-    `;
-#elif defined( WGSL )
-    const computeShaderString = `
-        #include "./shaders/pocketpt_ne.wgsl"
-    `;
-#endif
+    // GLSL vs. WGSL
+    var computeShaderString;
+    if ( params.shaderlang == "glsl" ) {
+        computeShaderString = await utils.loadTextfile("./shaders/pocketpt_ne.cs");
+    } else if ( params.shaderlang == "wgsl" ) {
+        computeShaderString = await utils.loadTextfile("./shaders/pocketpt_ne.wgsl");
+    }
 
-    const computePipeline = device.createComputePipeline({
-        layout: device.createPipelineLayout({ bindGroupLayouts: [computeBindGroupLayout] }),
-        compute: {
-            module: device.createShaderModule({
-            #if defined( GLSL )
-                code: glslang.compileGLSL(computeShaderString, "compute")
-            #elif defined( WGSL )
-                code: computeShaderString,
-            #endif
-            }),
-            entryPoint: "main"
-        }
-    });
-
+    var computePipeline;
+    if ( params.shaderlang == "glsl" ) {
+        computePipeline = device.createComputePipeline({
+            layout: device.createPipelineLayout({ bindGroupLayouts: [computeBindGroupLayout] }),
+            compute: {
+                module: device.createShaderModule({
+                    code: glslang.compileGLSL(computeShaderString, "compute")
+                }),
+                entryPoint: "main"
+            }
+        });
+    } else if ( params.shaderlang == "wgsl" ) {
+        computePipeline = device.createComputePipeline({
+            layout: device.createPipelineLayout({ bindGroupLayouts: [computeBindGroupLayout] }),
+            compute: {
+                module: device.createShaderModule({
+                    code: computeShaderString, // GLSL vs. WGSL
+                }),
+                entryPoint: "main"
+            }
+        });        
+    }
 
     ////////////////////////////////
     // Kick off path tracing in the compute shader
@@ -284,4 +300,6 @@
             [canvas.width, canvas.height]
         );
     }
-})();
+};
+
+export default init;
