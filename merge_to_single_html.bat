@@ -1,3 +1,5 @@
+@echo pass 'GLSL' or 'WGSL' as an argument
+
 python3 html_merger.py index_cpp_input.html
 
 pcpp pocketpt_ne.js -D %1 --line-directive > pocketpt_pcpp.js
