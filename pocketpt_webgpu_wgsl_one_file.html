@@ -31,7 +31,7 @@
         (async function init() {
             // ### WebGPU context
             utils.checkSupport();
-            const [adapter, glslang] = await Promise.all([
+            const [adapter] = await Promise.all([
                 navigator.gpu.requestAdapter(),
             ]);
             const device = await adapter.requestDevice();
@@ -46,7 +46,7 @@
             });
             
             // ### scene - spheres
-            const numSpheres = 9;
+            const numSpheres = 3;
             const floatsPerSphere = 12;
             const spheresByteSize = floatsPerSphere * 4 * numSpheres;
             const spheresBuffer = device.createBuffer({
