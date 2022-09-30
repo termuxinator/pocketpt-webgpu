@@ -30,6 +30,7 @@ The basic idea is to merge all files(CSS, Javascript, WGSL/GLSL) into a single H
 In the root directory of the project, run the following commands to generate the GLSL-compute-shader single-HTML file, and the WGSL-computer-shader single-HTML file, respectively:
 * merge_to_single_html.bat GLSL
 * merge_to_single_html.bat WGSL
+
 Note that the actual single-file HTMLs on the main branch had some minor manual touch-up applied to them - mainly related to layout/indentation, adding some comments, and re-introducing '#defines' in the GLSL shader string which the C-preprocessor had substituted for their numerical values in the process.
 
 ## 
