@@ -25,6 +25,13 @@ In this project, WebGPU runs "headless" (without a "context window"), but for co
 
 An internet connections is required for running the GLSL compute-shader version. The WGSL version will also work offline.
 
+## Creating the single-file HTML
+The basic idea is to merge all files(CSS, Javascript, WGSL/GLSL) into a single HTML file. First a python script from [Stackoverflow](https://stackoverflow.com/questions/44646481/merging-js-css-html-into-single-html) merges the CSS files into the HTML skeleton file. Then [pcpp 1.30, A C99 preprocessor written in pure Python](https://pypi.org/project/pcpp/) is used to resolve the '#include' statements in the Javascript and HTML files (also pulls in the shaders from their respective files into the Javascripts as strings). A recent Python 3 install is needed to run these scripts. For convenience, a batch file is provided (Windows only, but should be easily portable to Linux/macOS/...) that executes all necessary steps.
+In the root directory of the project, run the following commands to generate the GLSL-compute-shader single-HTML file, and the WGSL-computer-shader single-HTML file, respectively:
+* merge_to_single_html.bat GLSL
+* merge_to_single_html.bat WGSL
+Note that the actual single-file HTMLs on the main branch had some minor manual touch-up applied to them - mainly related to layout/indentation, adding some comments, and re-introducing '#defines' in the GLSL shader string which the C-preprocessor had substituted for their numerical values in the process.
+
 ## 
 Special thanks go to Reinhold Preiner, and of course Kevin Beason for publishing their respective path tracing source code, as well as to 
 [Austin Eng's WebGPU Samples](https://austin-eng.com/webgpu-samples/), [Tarek Sherif's WebGPU Examples](https://github.com/tsherif/webgpu-examples), and [Surma's article 'WebGPU - All of the cores, none of the canvas'](https://surma.dev/things/webgpu/), which were invaluable resources to get this project up and running.
