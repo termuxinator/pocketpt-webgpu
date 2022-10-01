@@ -11,6 +11,8 @@ A WebGPU path tracer in a single HTML file, inspired by [Reinhold Preiner's sing
 
 * Run: 
     - Simply open the HTML file in your browser, and wait for the rendered image to appear. There is no need for a local HTTP server to circumvent CORS, since CSS, Javascript and WGSL/GLSL shaders are all embedded into the respective HTML files.
+    - [Online Demo (GLSL)](https://htmlpreview.github.io/?https://github.com/pjhusky/pocketpt-webgpu/blob/main/pocketpt_webgpu_glsl_one_file.html)
+    - [Online Demo (WGSL)](https://htmlpreview.github.io/?https://github.com/pjhusky/pocketpt-webgpu/blob/main/pocketpt_webgpu_wgsl_one_file.html)
 
 * Adjust:
     - rendering resolution - search for "webgpu-canvas" and adjust its (max-)width/height attributes
