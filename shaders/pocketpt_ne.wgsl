@@ -154,7 +154,7 @@ fn main(@builtin(global_invocation_id) param: vec3<u32>) {
     
     var emissive: f32 = 1.0;
     //-- loop over ray bounces
-    let maxDepth: u32 = 24u;
+    let maxDepth: u32 = 12u;
     for ( var depth: u32 = 0u; depth < maxDepth; depth += 1u ) {
         var hitInfo: HitInfo;
         

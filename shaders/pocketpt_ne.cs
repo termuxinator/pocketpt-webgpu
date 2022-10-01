@@ -131,7 +131,7 @@ void main() {
 
     //-- loop over ray bounces
     float emissive = 1;
-    for (int depth = 0, maxDepth = 24; depth < maxDepth; depth++)
+    for (int depth = 0, maxDepth = 12; depth < maxDepth; depth++)
     {
         HitInfo hitInfo;
         

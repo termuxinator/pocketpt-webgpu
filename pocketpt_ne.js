@@ -110,7 +110,7 @@
     // Compute uniform buffer 
     //////////////////////////
     var pass = 0;
-    const samplesPerPixel = 400;
+    const samplesPerPixel = 100;
     const computeUniformData = new Uint32Array([
         canvas.width, canvas.height, pass, samplesPerPixel
     ]);
