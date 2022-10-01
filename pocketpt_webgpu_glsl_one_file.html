@@ -105,7 +105,7 @@
 
             // ### parameters for path tracer
             var pass = 0;
-            const samplesPerPixel = 400;
+            const samplesPerPixel = 100;
             const computeUniformData = new Uint32Array([
                 canvas.width, canvas.height, pass, samplesPerPixel
             ]);
@@ -265,7 +265,7 @@
                     Ray ray = Ray(lc, normalize(lc - spos));
 
                     float emissive = 1;
-                    for (int depth = 0, maxDepth = 24; depth < maxDepth; depth++)
+                    for (int depth = 0, maxDepth = 12; depth < maxDepth; depth++)
                     {
                         HitInfo hitInfo;
                         if ( !intersect( ray, hitInfo ) ) { continue; }

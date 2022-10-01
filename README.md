@@ -13,13 +13,13 @@ A WebGPU path tracer in a single HTML file, inspired by [Reinhold Preiner's sing
     - Simply open the HTML file in your browser, and wait for the rendered image to appear. There is no need for a local HTTP server to circumvent CORS, since CSS, Javascript and WGSL/GLSL shaders are all embedded into the respective HTML files.
     - Be patient, as there will be no output for a couple of seconds until the path tracer has finished its calculations entirely!
         * You could open the Dev Console though to see if any errors were reported...
-    - [Online Demo (GLSL)](https://htmlpreview.github.io/?https://github.com/pjhusky/pocketpt-webgpu/blob/main/pocketpt_webgpu_glsl_one_file.html)
-    - [Online Demo (WGSL)](https://htmlpreview.github.io/?https://github.com/pjhusky/pocketpt-webgpu/blob/main/pocketpt_webgpu_wgsl_one_file.html)
+    - [Online Demo (GLSL)](https://rawcdn.githack.com/pjhusky/pocketpt-webgpu/blob/main/pocketpt_webgpu_glsl_one_file.html)
+    - [Online Demo (WGSL)](https://rawcdn.githack.com/pjhusky/pocketpt-webgpu/blob/main/pocketpt_webgpu_wgsl_one_file.html)
 
 * Adjust:
-    - rendering resolution - search for "webgpu-canvas" and adjust its (max-)width/height attributes
-    - samplesPerPixel - determines how many rays are traced per pixel (the more samples per pixel, the less noisy the result)
-    - maxDepth - determines the maximum number of "bounces" per ray (default: 24)
+    - rendering resolution - search for "webgpu-canvas" and adjust its (max-)width/height attributes (default: 512x512)
+    - samplesPerPixel - determines how many rays are traced per pixel; the more samples per pixel, the less noisy the result (default: 100)
+    - maxDepth - determines the maximum number of "bounces" per ray (default: 12)
 
 ## Implementation Notes
 
