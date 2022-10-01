@@ -11,11 +11,13 @@ A WebGPU path tracer in a single HTML file, inspired by [Reinhold Preiner's sing
 
 * Run: 
     - Simply open the HTML file in your browser, and wait for the rendered image to appear. There is no need for a local HTTP server to circumvent CORS, since CSS, Javascript and WGSL/GLSL shaders are all embedded into the respective HTML files.
+    - [Online Demo (GLSL)](https://rawcdn.githack.com/pjhusky/pocketpt-webgpu/runtime-multiple-files/index.html)
+    - [Online Demo (WGSL)](https://rawcdn.githack.com/pjhusky/pocketpt-webgpu/runtime-multiple-files/index.html?shaderlang=wgsl)
 
 * Adjust:
-    - rendering resolution - search for "webgpu-canvas" and adjust its (max-)width/height attributes
-    - samplesPerPixel - determines how many rays are traced per pixel (the more samples per pixel, the less noisy the result)
-    - maxDepth - determines the maximum number of "bounces" per ray (default: 24)
+    - rendering resolution - search for "webgpu-canvas" and adjust its (max-)width/height attributes (default: 512x512)
+    - samplesPerPixel - determines how many rays are traced per pixel; the more samples per pixel, the less noisy the result (default: 100)
+    - maxDepth - determines the maximum number of "bounces" per ray (default: 12)
 
 ## Implementation Notes
 
@@ -30,16 +32,16 @@ Since the HTML, CCS, Javascript and GLSL/WGSL shader files are separated and "me
 
 * Switching between GLSL (default) and WGSL:
     - Use WGSL:
-        * index.html?shaderlang=WGSL
+        * index.html?shaderlang=wgsl
 
     - Use GLSL:
-        * index.html?shaderlang=GLSL
+        * index.html?shaderlang=glsl
         * index.html
 
     - Example:
         * ```<project-root>simple-http-server --nocache```
         * paste this url into Google Chrome Canary
-            - http://localhost:8000/index.html?shaderlang=WGSL
+            - http://localhost:8000/index.html?shaderlang=wgsl
 
 ## 
 Special thanks go to Reinhold Preiner, and of course Kevin Beason for publishing their respective path tracing source code, as well as to 
