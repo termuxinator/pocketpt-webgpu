@@ -245,7 +245,7 @@
                         if ( denom > eps ) {
                             d = ( planeEqu.w - dot( ray.o, planeEqu.xyz ) ) / denom ;
                             if ( d < t ) {
-                                t = d; *(hitInfo).objType = ePlane; *(hitInfo).objIdx = i;
+                                t = d; (*hitInfo).objType = ePlane; (*hitInfo).objIdx = i;
                             }
                         }
                     }
@@ -269,12 +269,12 @@
                             min(d1,d2) > eps );
 
                         if (d < t) {
-                            t=d; *(hitInfo).objType = eSphere; *(hitInfo).objIdx = i;
+                            t=d; (*hitInfo).objType = eSphere; (*hitInfo).objIdx = i;
                         }
                     }
 
                     if (t < inf) {
-                        *(hitInfo).rayT = t;
+                        (*hitInfo).rayT = t;
                         return true;
                     }
                     return false;
